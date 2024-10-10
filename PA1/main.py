@@ -4,6 +4,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from sklearn.feature_extraction.text import CountVectorizer
+from DANmodels import DAN
 from sentiment_data import read_sentiment_examples
 from torch.utils.data import Dataset, DataLoader
 import time
@@ -145,8 +146,41 @@ def main():
         # plt.show()
 
     elif args.model == "DAN":
-        #TODO:  Train and evaluate your DAN
-        print("DAN model not implemented yet")
+        start_time = time.time()
+        print('\n2 layers:')
+        nn2_train_accuracy, nn2_test_accuracy = experiment(DAN(input_size=512, hidden_size=100), train_loader, test_loader)
+
+        # Train and evaluate NN3
+
+        # Plot the training accuracy
+        plt.figure(figsize=(8, 6))
+        plt.plot(nn2_train_accuracy, label='2 layers')
+        plt.xlabel('Epochs')
+        plt.ylabel('Training Accuracy')
+        plt.title('Training Accuracy for 2 Layer Networks')
+        plt.legend()
+        plt.grid()
+
+        # Save the training accuracy figure
+        training_accuracy_file = 'train_accuracy.png'
+        plt.savefig(training_accuracy_file)
+        print(f"\n\nTraining accuracy plot saved as {training_accuracy_file}")
+
+        # Plot the testing accuracy
+        plt.figure(figsize=(8, 6))
+        plt.plot(nn2_test_accuracy, label='2 layers')
+        plt.xlabel('Epochs')
+        plt.ylabel('Dev Accuracy')
+        plt.title('Dev Accuracy for 2 Layer Networks')
+        plt.legend()
+        plt.grid()
+
+        # Save the testing accuracy figure
+        testing_accuracy_file = 'dev_accuracy.png'
+        plt.savefig(testing_accuracy_file)
+        print(f"Dev accuracy plot saved as {testing_accuracy_file}\n\n")
+
+        # plt.show()
 
 if __name__ == "__main__":
     main()
