@@ -21,8 +21,11 @@ def train_epoch(data_loader, model, loss_fn, optimizer):
     model.train()
     train_loss, correct = 0, 0
     for batch, (X, y) in enumerate(data_loader):
-        X = X.float()
-
+        if isinstance(model, DAN):  # Assuming DAN is a class name
+            X = X.int()
+            # X = X.to(torch.int)
+        else:
+            X = X.float()
         # Compute prediction error
         pred = model(X)
         loss = loss_fn(pred, y)
@@ -47,7 +50,11 @@ def eval_epoch(data_loader, model, loss_fn, optimizer):
     eval_loss = 0
     correct = 0
     for batch, (X, y) in enumerate(data_loader):
-        X = X.float()
+        if isinstance(model, DAN):  # Assuming DAN is a class name
+            X = X.int()
+            # X = X.to(torch.int)
+        else:
+            X = X.float()
 
         # Compute prediction error
         pred = model(X)
@@ -148,16 +155,14 @@ def main():
     elif args.model == "DAN":
         start_time = time.time()
         print('\n2 layers:')
-        nn2_train_accuracy, nn2_test_accuracy = experiment(DAN(input_size=512, hidden_size=100), train_loader, test_loader)
-
-        # Train and evaluate NN3
+        nn2_train_accuracy, nn2_test_accuracy = experiment(DAN(file='data/glove.6B.50d-relativized.txt',input_size=512, hidden_size=100), train_loader, test_loader)
 
         # Plot the training accuracy
         plt.figure(figsize=(8, 6))
         plt.plot(nn2_train_accuracy, label='2 layers')
         plt.xlabel('Epochs')
         plt.ylabel('Training Accuracy')
-        plt.title('Training Accuracy for 2 Layer Networks')
+        plt.title('Training Accuracy for 2 Layer Network')
         plt.legend()
         plt.grid()
 
@@ -171,7 +176,7 @@ def main():
         plt.plot(nn2_test_accuracy, label='2 layers')
         plt.xlabel('Epochs')
         plt.ylabel('Dev Accuracy')
-        plt.title('Dev Accuracy for 2 Layer Networks')
+        plt.title('Dev Accuracy for 2 Layer Network')
         plt.legend()
         plt.grid()
 
@@ -179,6 +184,7 @@ def main():
         testing_accuracy_file = 'dev_accuracy.png'
         plt.savefig(testing_accuracy_file)
         print(f"Dev accuracy plot saved as {testing_accuracy_file}\n\n")
+
 
         # plt.show()
 
