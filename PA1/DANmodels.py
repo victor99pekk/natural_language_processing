@@ -9,7 +9,7 @@ from collections import defaultdict
 
 
 class DAN(nn.Module):
-    def __init__(self, file: str, size1:int=300, size2:int=300, drop_prob:float=0.1):
+    def __init__(self, file: str, size1:int=300, size2:int=300, drop_prob:float=0.06):
         super().__init__()
         self.wordembeddings = read_word_embeddings(file)
         self.embedding_layer = self.wordembeddings.get_initialized_embedding_layer()
@@ -19,8 +19,7 @@ class DAN(nn.Module):
         self.layer2 = nn.Linear(size1, size2)
         self.output_layer = nn.Linear(size2, 2)
         self.log_softmax = nn.Softmax(dim=1)
-        self.input_dropout = nn.Dropout(drop_prob)
-        self.dropout = nn.Dropout(drop_prob / 3)
+        self.dropout = nn.Dropout(drop_prob)
 
     def forward(self, word_indices):
 
@@ -33,9 +32,7 @@ class DAN(nn.Module):
 
         mean_vector = F.relu(self.layer1(mean_vector))
         mean_vector = self.dropout(mean_vector)
-        # mean_vector = self.dropout(mean_vector)
-
-        # mean_vector = self.dropout(mean_vector)
+        mean_vector = self.dropout(mean_vector)
 
         mean_vector = F.relu(self.layer2(mean_vector))
         mean_vector = self.log_softmax(self.output_layer(mean_vector))
