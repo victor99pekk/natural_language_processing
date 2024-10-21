@@ -74,7 +74,7 @@ def experiment(model, train_loader, test_loader):
 
     all_train_accuracy = []
     all_test_accuracy = []
-    for epoch in range(200):
+    for epoch in range(50):
         train_accuracy, train_loss = train_epoch(train_loader, model, loss_fn, optimizer)
         all_train_accuracy.append(train_accuracy)
 
