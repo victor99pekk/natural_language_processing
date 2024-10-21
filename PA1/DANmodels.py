@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from sentiment_data import read_sentiment_examples, read_word_embeddings
+from sentiment_data import WordEmbeddings, read_sentiment_examples, read_word_embeddings
 import torch
 from torch.utils.data import Dataset
 from sklearn.feature_extraction.text import CountVectorizer
@@ -9,49 +9,46 @@ from collections import defaultdict
 
 
 class DAN(nn.Module):
-    def __init__(self, file: str, size1:int=300, size2:int=300, drop_prob:float=0.06):
+    def __init__(self, wordembeddings: WordEmbeddings=None, size1:int=300, size2:int=300, drop_prob:float=0.2):
         super().__init__()
-        self.wordembeddings = read_word_embeddings(file)
-        self.embedding_layer = self.wordembeddings.get_initialized_embedding_layer()
+        if wordembeddings != None:
+            self.wordembeddings = wordembeddings
+            self.embedding_layer = self.wordembeddings.get_initialized_embedding_layer()
+        else:
+            self.embedding_layer = nn.Embedding(14923, 300)
+        
 
         self.embedding_dim = self.embedding_layer.weight.size(1)
         self.layer1 = nn.Linear(self.embedding_dim, size1)
         self.layer2 = nn.Linear(size1, size2)
         self.output_layer = nn.Linear(size2, 2)
         self.log_softmax = nn.Softmax(dim=1)
-        self.dropout = nn.Dropout(drop_prob)
+        self.dropout = nn.Dropout(drop_prob/3)
+        self.input_dropout = nn.Dropout(drop_prob)
 
     def forward(self, word_indices):
+        word_indices = word_indices.long()
 
-        word_indices = mask_tensor(word_indices)
-
+        # Get the embeddings for the word indices
         sentence_embeddings = self.embedding_layer(word_indices)
 
-        mean_vector = sentence_embeddings.mean(dim=1)
-        mean_vector = self.dropout(mean_vector)
+        # Apply dropout to the embeddings
+        sentence_embeddings = self.input_dropout(sentence_embeddings)
 
+        # Compute the mean of the embeddings along the sequence length dimension
+        mean_vector = sentence_embeddings.mean(dim=1)
+
+        # Pass through the layers with ReLU activation
         mean_vector = F.relu(self.layer1(mean_vector))
-        mean_vector = self.dropout(mean_vector)
         mean_vector = self.dropout(mean_vector)
 
         mean_vector = F.relu(self.layer2(mean_vector))
+        mean_vector = self.dropout(mean_vector)
+
         mean_vector = self.log_softmax(self.output_layer(mean_vector))
+        
         return mean_vector
-    
-def mask_tensor(tensor, mask_prob=0.15):
-    """
-    Masks values from the input tensor with a given probability.
-    :param tensor: Input tensor.
-    :param mask_prob: Probability of masking each element.
-    :return: Masked tensor.
-    """
-    # Create a mask with the same shape as the tensor
-    mask = (torch.rand(tensor.shape) > mask_prob).int()
-    
-    # Apply the mask to the tensor
-    masked_tensor = tensor * mask
-    
-    return masked_tensor
+
 
 class SentimentDatasetDAN(Dataset):
     def __init__(self, infile, word_embeddings, max_len=50):

@@ -158,7 +158,7 @@ def main():
     elif args.model == "DAN":
         start_time = time.time()
         print('\nDAN, 3 layers:')
-        nn2_train_accuracy, nn2_test_accuracy = experiment(DAN(file='data/glove.6B.50d-relativized.txt'), train_loader, test_loader)
+        nn2_train_accuracy, nn2_test_accuracy = experiment(DAN(wordembeddings=None), train_loader, test_loader)
 
         # Plot the training accuracy
         plt.figure(figsize=(8, 6))
