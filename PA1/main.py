@@ -70,7 +70,7 @@ def eval_epoch(data_loader, model, loss_fn, optimizer):
 # Experiment function to run training and evaluation for multiple epochs
 def experiment(model, train_loader, test_loader):
     loss_fn = nn.NLLLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
 
     all_train_accuracy = []
     all_test_accuracy = []
@@ -155,7 +155,7 @@ def main():
     elif args.model == "DAN":
         start_time = time.time()
         print('\n2 layers:')
-        nn2_train_accuracy, nn2_test_accuracy = experiment(DAN(file='data/glove.6B.50d-relativized.txt',input_size=512, hidden_size=100), train_loader, test_loader)
+        nn2_train_accuracy, nn2_test_accuracy = experiment(DAN(file='data/glove.6B.50d-relativized.txt'), train_loader, test_loader)
 
         # Plot the training accuracy
         plt.figure(figsize=(8, 6))

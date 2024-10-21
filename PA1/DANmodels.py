@@ -9,15 +9,18 @@ from collections import defaultdict
 
 
 class DAN(nn.Module):
-    def __init__(self, file: str, input_size: int, hidden_size: int):
+    def __init__(self, file: str, size1:int=300, size2:int=300, size3:int =300, drop_prob:float=0.3):
         super().__init__()
         self.wordembeddings = read_word_embeddings(file)
         self.embedding_layer = self.wordembeddings.get_initialized_embedding_layer()
 
         self.embedding_dim = self.embedding_layer.weight.size(1)
-        self.layer1 = nn.Linear(self.embedding_dim, hidden_size)
-        self.layer2 = nn.Linear(hidden_size, 2)
+        self.layer1 = nn.Linear(self.embedding_dim, size1)
+        self.layer2 = nn.Linear(size1, size2)
+        self.layer3 = nn.Linear(size2, size3)
+        self.output_layer = nn.Linear(size3, 2)
         self.log_softmax = nn.Softmax(dim=1)
+        self.dropout = nn.Dropout(drop_prob)
 
     def forward(self, word_indices):
         size = word_indices.size(0)
@@ -26,11 +29,14 @@ class DAN(nn.Module):
 
         sentence_embeddings = self.embedding_layer(word_indices)
 
-        mean_vector = sentence_embeddings.mean(dim=1)
+        mean_vector = sentence_embeddings.sum(dim=1)
+        mean_vector = self.dropout(mean_vector)
 
         mean_vector = F.relu(self.layer1(mean_vector))
-        mean_vector = self.log_softmax(self.layer2(mean_vector))
-        print(mean_vector)
+
+        mean_vector = F.relu(self.layer2(mean_vector))
+        mean_vector = F.relu(self.layer3(mean_vector))
+        mean_vector = self.log_softmax(self.output_layer(mean_vector))
         return mean_vector
         # size = word_indices.size(0)
         # column_tensor = torch.arange(512).repeat(size, 1)
