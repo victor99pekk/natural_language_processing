@@ -9,7 +9,7 @@ from collections import defaultdict
 
 
 class DAN(nn.Module):
-    def __init__(self, file: str, size1:int=300, size2:int=300, size3:int =300, drop_prob:float=0.16):
+    def __init__(self, file: str, size1:int=300, size2:int=300, drop_prob:float=0.1):
         super().__init__()
         self.wordembeddings = read_word_embeddings(file)
         self.embedding_layer = self.wordembeddings.get_initialized_embedding_layer()
@@ -17,16 +17,14 @@ class DAN(nn.Module):
         self.embedding_dim = self.embedding_layer.weight.size(1)
         self.layer1 = nn.Linear(self.embedding_dim, size1)
         self.layer2 = nn.Linear(size1, size2)
-        self.layer3 = nn.Linear(size2, size3)
-        self.output_layer = nn.Linear(size3, 2)
+        self.output_layer = nn.Linear(size2, 2)
         self.log_softmax = nn.Softmax(dim=1)
-        self.dropout = nn.Dropout(drop_prob)
+        self.input_dropout = nn.Dropout(drop_prob)
+        self.dropout = nn.Dropout(drop_prob / 3)
 
     def forward(self, word_indices):
-        # print(word_indices)
-        # size = word_indices.size(0)
-        # column_tensor = torch.arange(512).repeat(size, 1)
-        # column_tensor = torch.reshape(column_tensor, (size, 512))
+
+        word_indices = mask_tensor(word_indices)
 
         sentence_embeddings = self.embedding_layer(word_indices)
 
@@ -34,14 +32,29 @@ class DAN(nn.Module):
         mean_vector = self.dropout(mean_vector)
 
         mean_vector = F.relu(self.layer1(mean_vector))
+        mean_vector = self.dropout(mean_vector)
+        # mean_vector = self.dropout(mean_vector)
+
         # mean_vector = self.dropout(mean_vector)
 
         mean_vector = F.relu(self.layer2(mean_vector))
-        # mean_vector = self.dropout(mean_vector)
-
-        mean_vector = F.relu(self.layer3(mean_vector))
         mean_vector = self.log_softmax(self.output_layer(mean_vector))
         return mean_vector
+    
+def mask_tensor(tensor, mask_prob=0.15):
+    """
+    Masks values from the input tensor with a given probability.
+    :param tensor: Input tensor.
+    :param mask_prob: Probability of masking each element.
+    :return: Masked tensor.
+    """
+    # Create a mask with the same shape as the tensor
+    mask = (torch.rand(tensor.shape) > mask_prob).int()
+    
+    # Apply the mask to the tensor
+    masked_tensor = tensor * mask
+    
+    return masked_tensor
 
 class SentimentDatasetDAN(Dataset):
     def __init__(self, infile, word_embeddings, max_len=50):

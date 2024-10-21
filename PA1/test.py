@@ -22,14 +22,26 @@ column_tensor = torch.arange(512).repeat(16, 1)
 
 tensor1 = torch.tensor([1, 2], dtype=torch.float)
 tensor2 = torch.tensor([2, 2])
-print(torch.nn.LogSoftmax(dim=0)(tensor1))
-print(embedding_layer.weight)
+# print(torch.nn.LogSoftmax(dim=0)(tensor1))
+# print(embedding_layer.weight)
+def mask_tensor(tensor, mask_prob=0.3):
+    """
+    Masks values from the input tensor with a given probability.
+    :param tensor: Input tensor.
+    :param mask_prob: Probability of masking each element.
+    :return: Masked tensor.
+    """
+    # Create a mask with the same shape as the tensor
+    mask = (torch.rand(tensor.shape) > mask_prob).int()
+    
+    # Apply the mask to the tensor
+    masked_tensor = tensor * mask
+    
+    return masked_tensor
 
 
-# print(column_tensor)
+tensor = torch.tensor([[1, 2, 3, 4,5 , 6, 7, 6], [3, 4, 5, 5, 5, 3 , 6, 6]], dtype=float)
+drop = mask_tensor(tensor)
 
-# print(wordembeddings.get_embedding('and'))
-
-
-# print(word_embedding2)
-# print(word_embedding)
+for i in range(3):
+    print(drop)
