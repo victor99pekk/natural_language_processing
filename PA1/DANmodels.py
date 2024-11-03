@@ -29,16 +29,12 @@ class DAN(nn.Module):
     def forward(self, word_indices):
         word_indices = word_indices.long()
 
-        # Get the embeddings for the word indices
         sentence_embeddings = self.embedding_layer(word_indices)
 
-        # Apply dropout to the embeddings
         sentence_embeddings = self.input_dropout(sentence_embeddings)
 
-        # Compute the mean of the embeddings along the sequence length dimension
         mean_vector = sentence_embeddings.mean(dim=1)
 
-        # Pass through the layers with ReLU activation
         mean_vector = F.relu(self.layer1(mean_vector))
         mean_vector = self.dropout(mean_vector)
 

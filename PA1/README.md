@@ -9,5 +9,5 @@ python run_pre-trained_embedding.py --model DAN
 
 ## randomly initialized- embedding
 ```py
-python run_randomly-initialized_embedding.py --model DAN
+python3 run_randomly-initialized_embedding.py --model DAN
 ```
