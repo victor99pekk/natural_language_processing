@@ -2,7 +2,10 @@ import torch
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 import os
+import torch.optim as optim
+import torch.nn.functional as F
 
+from transformer import Classifier
 from tokenizer import SimpleTokenizer
 from dataset import SpeechesClassificationDataset, LanguageModelingDataset
 
@@ -69,8 +72,8 @@ def compute_classifier_accuracy(classifier, data_loader):
     with torch.no_grad():
         for X, Y in data_loader:
             X, Y = X.to(device), Y.to(device)
-            outputs = classifier(X)
-            _, predicted = torch.max(outputs.data, 1)
+            probs, prediction = classifier(X)
+            _, predicted = torch.max(probs.data, 1)
             total_correct += (predicted == Y).sum().item()
             total_samples += Y.size(0)
         accuracy = (100 * total_correct / total_samples)
@@ -102,28 +105,48 @@ def compute_perplexity(decoderLMmodel, data_loader, eval_iters=100):
 def main():
 
     print("Loading data and creating tokenizer ...")
-    texts = load_texts('speechesdataset')
+    texts = load_texts('PA2_code/speechesdataset')
     tokenizer = SimpleTokenizer(' '.join(texts)) # create a tokenizer from the data
     print("Vocabulary size is", tokenizer.vocab_size)
 
-    train_CLS_dataset = SpeechesClassificationDataset(tokenizer, "speechesdataset/train_CLS.tsv")
+    train_CLS_dataset = SpeechesClassificationDataset(tokenizer, "PA2_code/speechesdataset/train_CLS.tsv")
     train_CLS_loader = DataLoader(train_CLS_dataset, batch_size=batch_size,collate_fn=collate_batch,shuffle=True)
+    
+    test_CLS_dataset = SpeechesClassificationDataset(tokenizer, "PA2_code/speechesdataset/test_CLS.tsv")
+    test_CLS_loader = DataLoader(test_CLS_dataset, batch_size=batch_size, collate_fn=collate_batch, shuffle=False)
 
   
-    inputfile = "speechesdataset/train_LM.txt"
+    inputfile = "PA2_code/speechesdataset/train_LM.txt"
     with open(inputfile, 'r', encoding='utf-8') as f:
         lmtrainText = f.read()
     train_LM_dataset = LanguageModelingDataset(tokenizer, lmtrainText,  block_size)
     train_LM_loader = DataLoader(train_LM_dataset, batch_size=batch_size, shuffle=True)
 
      # for the classification  task, you will train for a fixed number of epochs like this:
-
+    vocab_size = tokenizer.vocab_size
+    model = Classifier(vocab_size).to(device)
+    optimizer = optim.Adam(model.parameters(),lr=1e-3)
+    loss = 0
+    
     for epoch in range(epochs_CLS):
-        for xb, yb in train_CLS_loader:
-            xb, yb = xb.to(device), yb.to(device)
+        for xb, target in train_CLS_loader:
+            xb, target = xb.to(device), target.to(device)
+            num_classes = 3
+            one_hot_tensor = torch.zeros((target.size(0), num_classes), dtype=torch.float32)
+            one_hot_tensor.scatter_(1, target.unsqueeze(1), 1)
+            optimizer.zero_grad()
+            probs, predicted = model(xb)
 
-            # CLS training code here
+            loss = F.cross_entropy(probs, one_hot_tensor)
+            loss.backward()
+            optimizer.step()
+        test_accuracy = compute_classifier_accuracy(model, test_CLS_loader)
+        train_accuracy = compute_classifier_accuracy(model, train_CLS_loader)
 
+        print(f"Epoch {epoch + 1}, Loss: {loss.item():.3f}, Train Accuracy: {train_accuracy:.3f}%, Test Accuracy: {test_accuracy:.3f}%")
+
+    final_accuracy = compute_classifier_accuracy(model, test_CLS_loader)
+    print(f"Final Test Accuracy: {final_accuracy}%")
 
     # for the language modeling task, you will iterate over the training data for a fixed number of iterations like this:
     for i, (xb, yb) in enumerate(train_LM_loader):

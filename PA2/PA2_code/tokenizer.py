@@ -1,3 +1,11 @@
+import nltk
+import ssl
+import certifi
+
+# Set the SSL certificate path
+ssl._create_default_https_context = ssl._create_unverified_context
+
+nltk.download('punkt_tab')
 from nltk.tokenize import word_tokenize
 import os
 
