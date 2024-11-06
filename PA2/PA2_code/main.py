@@ -4,6 +4,9 @@ from torch.nn.utils.rnn import pad_sequence
 import os
 import torch.optim as optim
 import torch.nn.functional as F
+import sys
+import argparse
+
 
 from transformer import Classifier, Decoder
 from tokenizer import SimpleTokenizer
@@ -103,7 +106,7 @@ def compute_perplexity(decoderLMmodel, data_loader, eval_iters=100):
     decoderLMmodel.train()
     return perplexity
 
-def main():
+def main(transformer_arch):
 
     print("Loading data and creating tokenizer ...")
     texts = load_texts('PA2_code/speechesdataset')
@@ -122,78 +125,72 @@ def main():
     optimizer = optim.Adam(model.parameters(),lr=1e-3)
     loss = 0
     
-    # for epoch in range(epochs_CLS):
-    #     for xb, target in train_CLS_loader:
-    #         xb, target = xb.to(device), target.to(device)
-    #         num_classes = 3
-    #         one_hot_tensor = torch.zeros((target.size(0), num_classes), dtype=torch.float32)
-    #         one_hot_tensor.scatter_(1, target.unsqueeze(1), 1)
-    #         optimizer.zero_grad()
-    #         probs, predicted = model(xb)
+    if transformer_arch == 'ENCODER':
+        for epoch in range(epochs_CLS):
+            for xb, target in train_CLS_loader:
+                xb, target = xb.to(device), target.to(device)
+                num_classes = 3
+                one_hot_tensor = torch.zeros((target.size(0), num_classes), dtype=torch.float32)
+                one_hot_tensor.scatter_(1, target.unsqueeze(1), 1)
+                optimizer.zero_grad()
+                probs, predicted = model(xb)
 
-    #         loss = F.cross_entropy(probs, one_hot_tensor)
-    #         loss.backward()
-    #         optimizer.step()
-    #     test_accuracy = compute_classifier_accuracy(model, test_CLS_loader)
-    #     train_accuracy = compute_classifier_accuracy(model, train_CLS_loader)
+                loss = F.cross_entropy(probs, one_hot_tensor)
+                loss.backward()
+                optimizer.step()
+            test_accuracy = compute_classifier_accuracy(model, test_CLS_loader)
+            train_accuracy = compute_classifier_accuracy(model, train_CLS_loader)
 
-    #     print(f"Epoch {epoch + 1}, Loss: {loss.item():.3f}, Train Accuracy: {train_accuracy:.3f}%, Test Accuracy: {test_accuracy:.3f}%")
+            print(f"Epoch {epoch + 1}, Loss: {loss.item():.3f}, Train Accuracy: {train_accuracy:.3f}%, Test Accuracy: {test_accuracy:.3f}%")
 
-    # final_accuracy = compute_classifier_accuracy(model, test_CLS_loader)
-    # print(f"Final Test Accuracy: {final_accuracy}%")
+        final_accuracy = compute_classifier_accuracy(model, test_CLS_loader)
+        print(f"Final Test Accuracy: {final_accuracy}%")
 
+    else:
 
+        # for the language modeling task, you will iterate over the training data for a fixed number of iterations like this:
+        inputfile = "train_LM.txt"
+        train_LM_loader = get_dataLoader(tokenizer, inputfile)
 
-    # for the language modeling task, you will iterate over the training data for a fixed number of iterations like this:
-    inputfile = "PA2_code/speechesdataset/train_LM.txt"
+        model = Decoder(n_embd, vocab_size)
+        optimizer = optim.Adam(model.parameters(),lr=1e-3)
+        loss = 0
+        print()
+        for i, (xb, yb) in enumerate(train_LM_loader):
+            if i >= max_iters:
+                break
+            elif i % 100 == 0:
+                print(f"perplexities after {i} iterations")
+                print("training data test: " ,compute_perplexity(model, train_LM_loader))
+                print("obama data test: " ,compute_perplexity(model, get_dataLoader(tokenizer, "test_LM_obama.txt")))
+                print("hbush data test: " ,compute_perplexity(model, get_dataLoader(tokenizer, "test_LM_hbush.txt")))
+                print("wbush data test: " ,compute_perplexity(model, get_dataLoader(tokenizer, "test_LM_wbush.txt")))
+                print("----------------------\n")
+            xb, yb = xb.to(device), yb.to(device)
+            optimizer.zero_grad()
+            loss = model(xb, yb)
+            loss.backward()
+            optimizer.step()
+        print("training data test: " ,compute_perplexity(model, train_LM_loader))
+        print("obama data test: " ,compute_perplexity(model, get_dataLoader(tokenizer, "test_LM_obama.txt")))
+        print("hbush data test: " ,compute_perplexity(model, get_dataLoader(tokenizer, "test_LM_hbush.txt")))
+        print("wbush data test: " ,compute_perplexity(model, get_dataLoader(tokenizer, "test_LM_wbush.txt")))
+        print("----------------------\n")
+
+        print()
+
+def get_dataLoader(tokenizer, inputfile):
+    inputfile = "PA2_code/speechesdataset/" + inputfile
     with open(inputfile, 'r', encoding='utf-8') as f:
         lmtrainText = f.read()
     train_LM_dataset = LanguageModelingDataset(tokenizer, lmtrainText,  block_size)
     train_LM_loader = DataLoader(train_LM_dataset, batch_size=batch_size, shuffle=True)
-
-    with open("PA2_code/speechesdataset/test_LM_obama.txt", 'r', encoding='utf-8') as f:
-        obama_text = f.read()
-    obama_LM_dataset = LanguageModelingDataset(tokenizer, obama_text,  block_size)
-    obama_LM_loader = DataLoader(obama_LM_dataset, batch_size=batch_size, shuffle=True)
-    with open("PA2_code/speechesdataset/test_LM_hbush.txt", 'r', encoding='utf-8') as f:
-        hbush_text = f.read()
-    hbush_LM_dataset = LanguageModelingDataset(tokenizer, hbush_text,  block_size)
-    hbush_LM_loader = DataLoader(hbush_LM_dataset, batch_size=batch_size, shuffle=True)
-    with open("PA2_code/speechesdataset/test_LM_wbush.txt", 'r', encoding='utf-8') as f:
-        wbush_text = f.read()
-    wbush_LM_dataset = LanguageModelingDataset(tokenizer, wbush_text,  block_size)
-    wbush_LM_loader = DataLoader(wbush_LM_dataset, batch_size=batch_size, shuffle=True)
-    with open("PA2_code/speechesdataset/train_CLS.tsv", 'r', encoding='utf-8') as f:
-        train_text = f.read()
-    train_LM_dataset2 = LanguageModelingDataset(tokenizer, train_text,  block_size)
-    train_LM_loader2 = DataLoader(train_LM_dataset2, batch_size=batch_size, shuffle=True)
-
-    model = Decoder(n_embd, vocab_size)
-    optimizer = optim.Adam(model.parameters(),lr=1e-3)
-    loss = 0
-    for i, (xb, yb) in enumerate(train_LM_loader):
-        if i >= max_iters:
-            break
-        xb, yb = xb.to(device), yb.to(device)
-        optimizer.zero_grad()
-        loss = model(xb, yb)
-        print(loss.item())
-        loss.backward()
-        optimizer.step()
-    print("\ntraining data test: " ,compute_perplexity(model, train_LM_loader))
-    print("\nobama data test: " ,compute_perplexity(model, obama_LM_loader))
-    print("\nhbush data test: " ,compute_perplexity(model, hbush_LM_loader))
-    print("\nwbush data test: " ,compute_perplexity(model, wbush_LM_loader))
-
-
-
-    print()
-
-
-
-    
+    return train_LM_loader
 
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Train and evaluate a language model.')
+    parser.add_argument('inputfile', type=str, help='The input file for training the language model.')
+    args = parser.parse_args()
+    main(args.inputfile)

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 # from torch.nn import functional as F
 
-dropout_prob = 0.15
+dropout_prob = 0.0
 block_size = 32  # Maximum context length for predictions
 vocab_size = 5755
 
@@ -130,6 +130,7 @@ class Decoder(nn.Module):
             nn.Linear(embd, hidden_size),
             nn.ReLU(),
             nn.Linear(hidden_size, vocab_size),
+            nn.Dropout(0.35)
         )
     
     def forward(self, x, y):
@@ -147,10 +148,6 @@ class Decoder(nn.Module):
         return F.cross_entropy(feedforward_output, y)
     
 
-
-
-
-
 class Classifier(nn.Module):
     def __init__(self, vocab_size, hidden_size=100, embd=64, dropout=dropout_prob):
         super().__init__()
@@ -160,7 +157,7 @@ class Classifier(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_size, 3),
             nn.Softmax(dim=1),
-            # nn.Dropout(dropout),
+            nn.Dropout(dropout),
         )
 
     def forward(self, x):
