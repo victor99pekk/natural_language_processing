@@ -87,11 +87,12 @@ def compute_perplexity(decoderLMmodel, data_loader, eval_iters=100):
     """
     decoderLMmodel.eval()
     losses= []
+    # total_loss = 0
     for X, Y in data_loader:
         X, Y = X.to(device), Y.to(device)
         loss = decoderLMmodel(X, Y) # your model should be computing the cross entropy loss
         losses.append(loss.item())
-        total_loss += loss.item()
+        # total_loss += loss.item()
         if len(losses) >= eval_iters: break
 
 
@@ -151,24 +152,44 @@ def main():
     train_LM_loader = DataLoader(train_LM_dataset, batch_size=batch_size, shuffle=True)
 
     with open("PA2_code/speechesdataset/test_LM_obama.txt", 'r', encoding='utf-8') as f:
-        lmtrainText = f.read()
-    obama_LM_dataset = LanguageModelingDataset(tokenizer, lmtrainText,  block_size)
+        obama_text = f.read()
+    obama_LM_dataset = LanguageModelingDataset(tokenizer, obama_text,  block_size)
     obama_LM_loader = DataLoader(obama_LM_dataset, batch_size=batch_size, shuffle=True)
+    with open("PA2_code/speechesdataset/test_LM_hbush.txt", 'r', encoding='utf-8') as f:
+        hbush_text = f.read()
+    hbush_LM_dataset = LanguageModelingDataset(tokenizer, hbush_text,  block_size)
+    hbush_LM_loader = DataLoader(hbush_LM_dataset, batch_size=batch_size, shuffle=True)
+    with open("PA2_code/speechesdataset/test_LM_wbush.txt", 'r', encoding='utf-8') as f:
+        wbush_text = f.read()
+    wbush_LM_dataset = LanguageModelingDataset(tokenizer, wbush_text,  block_size)
+    wbush_LM_loader = DataLoader(wbush_LM_dataset, batch_size=batch_size, shuffle=True)
+    with open("PA2_code/speechesdataset/train_CLS.tsv", 'r', encoding='utf-8') as f:
+        train_text = f.read()
+    train_LM_dataset2 = LanguageModelingDataset(tokenizer, train_text,  block_size)
+    train_LM_loader2 = DataLoader(train_LM_dataset2, batch_size=batch_size, shuffle=True)
 
     model = Decoder(n_embd, vocab_size)
-    optimizer = optim.Adam(model.parameters(),lr=1e-3)
+    optimizer = optim.Adam(model.parameters(),lr=5e-3)
     loss = 0
-    for i, (xb, yb) in enumerate(train_LM_loader):
+    for i, (xb, yb) in enumerate(train_LM_loader2):
         if i >= max_iters:
             break
         xb, yb = xb.to(device), yb.to(device)
-        yb_one_hot = F.one_hot(yb, num_classes=vocab_size).float()
         optimizer.zero_grad()
-        probs = model(xb)
-        loss = F.cross_entropy(probs, yb_one_hot)
+        loss = model(xb, yb)
+        print(loss.item())
         loss.backward()
         optimizer.step()
-    print(compute_perplexity(model, obama_LM_loader))
+    print("\ntraining data test: " ,compute_perplexity(model, train_LM_loader))
+    print("\nobama data test: " ,compute_perplexity(model, obama_LM_loader))
+    print("\nhbush data test: " ,compute_perplexity(model, hbush_LM_loader))
+    print("\nwbush data test: " ,compute_perplexity(model, wbush_LM_loader))
+
+
+
+    print()
+
+
 
     
 

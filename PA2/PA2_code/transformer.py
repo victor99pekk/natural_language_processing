@@ -6,6 +6,7 @@ import torch.nn.functional as F
 
 dropout_prob = 0.15
 block_size = 32  # Maximum context length for predictions
+vocab_size = 5755
 
 class LayerNorm(nn.Module):
     def __init__(self, dim, eps=1e-5):
@@ -49,14 +50,15 @@ class MaskedHead(nn.Module):
         self.query = nn.Linear(embd, head_size, bias=False)
         self.value = nn.Linear(embd, head_size, bias=False)
         self.dropout = nn.Dropout(dropout)
-        self.register_buffer('tril', torch.tril(torch.ones(block_size, block_size)))
+        self.register_buffer('tril', torch.tril(torch.ones(block_size, block_size, dtype=float)))
     def forward(self, input):
+        B,T,C = input.shape
         q = self.query(input)
         k = self.key(input)
         v = self.value(input)
-        wei = q @ k.transpose(-1, -2) * (32**-0.5)
-        wei = wei.masked_fill(self.tril==0, float('-inf'))
-        wei = F.softmax(wei, dim=1)
+        wei = q @ k.transpose(-1, -2) *  (k.shape[-1]**-0.5)
+        wei = wei.masked_fill(self.tril[:T][:T]==0, float('-inf'))
+        wei = F.softmax(wei, dim=-1)
         wei = self.dropout(wei)
         out = wei @ v
         return out
@@ -67,7 +69,7 @@ class MulitpleHeads(nn.Module):
         super().__init__()
         head_size = n_embd // nbr_heads
         self.nbr_heads = nbr_heads
-        if mask_future_tokens:
+        if not mask_future_tokens:
             self.heads = nn.ModuleList([Head(head_size=head_size, embd=n_embd) for _ in range(nbr_heads)])
         else:
             self.heads = nn.ModuleList([MaskedHead(head_size=head_size, embd=n_embd) for _ in range(nbr_heads)])
@@ -126,15 +128,21 @@ class Decoder(nn.Module):
         self.norm = LayerNorm(dim=1)
         self.linear_layer = nn.Linear(embd, vocab_size)
     
-    def forward(self, x):
+    def forward(self, x, y):
+        # y = F.one_hot(y, num_classes=vocab_size).float()
+        # print(y)
         token_emb = self.token_embeddings(x)    # B, T, C
         pos_emb = self.postional_embeddings(x)
         emb_vector = token_emb + pos_emb
         emb_vector = self.block(emb_vector)
+        B,T,C = emb_vector.shape
         emb_vector = self.norm(emb_vector) # B,T,C
         linear_output = self.linear_layer(emb_vector) # B,T, vocab_size
-        return F.softmax(linear_output, dim=2)  # batches, words (ordered chronologically), 
+        # probs = F.softmax(linear_output, dim=2)  # batches, words (ordered chronologically), 
                                             #probs for every word occuring next
+        linear_output = linear_output.view(B*T, vocab_size)
+        y = y.view(B*T)
+        return F.cross_entropy(linear_output, y)
     
 
 
