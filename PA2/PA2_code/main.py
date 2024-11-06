@@ -169,9 +169,9 @@ def main():
     train_LM_loader2 = DataLoader(train_LM_dataset2, batch_size=batch_size, shuffle=True)
 
     model = Decoder(n_embd, vocab_size)
-    optimizer = optim.Adam(model.parameters(),lr=5e-3)
+    optimizer = optim.Adam(model.parameters(),lr=1e-3)
     loss = 0
-    for i, (xb, yb) in enumerate(train_LM_loader2):
+    for i, (xb, yb) in enumerate(train_LM_loader):
         if i >= max_iters:
             break
         xb, yb = xb.to(device), yb.to(device)

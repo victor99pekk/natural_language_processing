@@ -120,13 +120,17 @@ class Encoder(nn.Module):
         return self.norm(mean_vector)
 
 class Decoder(nn.Module):
-    def __init__(self,embd, vocab_size):
+    def __init__(self,embd, vocab_size, hidden_size=100):
         super().__init__()
         self.token_embeddings = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embd)
         self.postional_embeddings = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embd)
         self.block = Block(embd=embd)
         self.norm = LayerNorm(dim=1)
-        self.linear_layer = nn.Linear(embd, vocab_size)
+        self.feedForward_layer = nn.Sequential(
+            nn.Linear(embd, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, vocab_size),
+        )
     
     def forward(self, x, y):
         # y = F.one_hot(y, num_classes=vocab_size).float()
@@ -137,12 +141,10 @@ class Decoder(nn.Module):
         emb_vector = self.block(emb_vector)
         B,T,C = emb_vector.shape
         emb_vector = self.norm(emb_vector) # B,T,C
-        linear_output = self.linear_layer(emb_vector) # B,T, vocab_size
-        # probs = F.softmax(linear_output, dim=2)  # batches, words (ordered chronologically), 
-                                            #probs for every word occuring next
-        linear_output = linear_output.view(B*T, vocab_size)
+        feedforward_output = self.feedForward_layer(emb_vector) # B,T, vocab_size
+        feedforward_output = feedforward_output.view(B*T, vocab_size)
         y = y.view(B*T)
-        return F.cross_entropy(linear_output, y)
+        return F.cross_entropy(feedforward_output, y)
     
 
 
