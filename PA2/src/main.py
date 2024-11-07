@@ -6,6 +6,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import sys
 import argparse
+from utilities import Utilities
 
 
 from transformer import Classifier, Decoder
@@ -93,7 +94,7 @@ def compute_perplexity(decoderLMmodel, data_loader, eval_iters=100):
     # total_loss = 0
     for X, Y in data_loader:
         X, Y = X.to(device), Y.to(device)
-        loss = decoderLMmodel(X, Y) # your model should be computing the cross entropy loss
+        loss,_ = decoderLMmodel(X, Y) # your model should be computing the cross entropy loss
         losses.append(loss.item())
         # total_loss += loss.item()
         if len(losses) >= eval_iters: break
@@ -120,12 +121,18 @@ def main(transformer_arch):
     test_CLS_loader = DataLoader(test_CLS_dataset, batch_size=batch_size, collate_fn=collate_batch, shuffle=False)
 
      # for the classification  task, you will train for a fixed number of epochs like this:
-    vocab_size = tokenizer.vocab_size
-    model = Classifier(vocab_size).to(device)
-    optimizer = optim.Adam(model.parameters(),lr=1e-3)
-    loss = 0
+
+    # utils = Utilities(tokenizer, model.encoder)
+    # utils.sanity_check("hello how are you today?", 32)
     
     if transformer_arch == 'ENCODER':
+        vocab_size = tokenizer.vocab_size
+        model = Classifier(vocab_size).to(device)
+        optimizer = optim.Adam(model.parameters(),lr=1e-3)
+        loss = 0
+        utils = Utilities(tokenizer, model.encoder)
+        utils.sanity_check("Because I know our work has not only helped so many Americans, it has inspired so many Americans, especially so many young people out there, to believe that you can make a difference, to hitch your wagon to something bigger than yourselves.", 32)
+
         for epoch in range(epochs_CLS):
             for xb, target in train_CLS_loader:
                 xb, target = xb.to(device), target.to(device)
@@ -145,17 +152,22 @@ def main(transformer_arch):
 
         final_accuracy = compute_classifier_accuracy(model, test_CLS_loader)
         print(f"Final Test Accuracy: {final_accuracy}%")
+        utils = Utilities(tokenizer, model.encoder)
+        utils.sanity_check("Because I know our work has not only helped so many Americans, it has inspired so many Americans, especially so many young people out there, to believe that you can make a difference, to hitch your wagon to something bigger than yourselves.", 32)
 
     else:
 
         # for the language modeling task, you will iterate over the training data for a fixed number of iterations like this:
         inputfile = "train_LM.txt"
         train_LM_loader = get_dataLoader(tokenizer, inputfile)
-
+        vocab_size = 5755
         model = Decoder(n_embd, vocab_size)
         optimizer = optim.Adam(model.parameters(),lr=1e-3)
         loss = 0
         print()
+        utils = Utilities(tokenizer, model)
+        string = "Because I know our work has not only helped so many Americans, it has inspired so many Americans"
+        utils.sanity_check(string, 32)
         for i, (xb, yb) in enumerate(train_LM_loader):
             if i >= max_iters:
                 break
@@ -168,7 +180,7 @@ def main(transformer_arch):
                 print("----------------------\n")
             xb, yb = xb.to(device), yb.to(device)
             optimizer.zero_grad()
-            loss = model(xb, yb)
+            loss, _ = model(xb, yb)
             loss.backward()
             optimizer.step()
         print("training data test: " ,compute_perplexity(model, train_LM_loader))
@@ -178,6 +190,10 @@ def main(transformer_arch):
         print("----------------------\n")
 
         print()
+        utils = Utilities(tokenizer, model)
+        string = "Because I know our work has not only helped so many Americans, it has inspired so many Americans"
+        utils.sanity_check(string, 32)
+
 
 def get_dataLoader(tokenizer, inputfile):
     inputfile = "PA2_code/speechesdataset/" + inputfile

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 # from torch.nn import functional as F
 
-dropout_prob = 0.0
+dropout_prob = 0.1
 block_size = 32  # Maximum context length for predictions
 vocab_size = 5755
 
@@ -31,6 +31,7 @@ class Head(nn.Module):
         self.query = nn.Linear(embd, head_size, bias=False)
         self.value = nn.Linear(embd, head_size, bias=False)
         self.dropout = nn.Dropout(dropout)
+        self.att_mat = None
         # self.register_buffer('tril', torch.tril(torch.ones(block_size, block_size)))
     
     def forward(self, input):
@@ -38,7 +39,8 @@ class Head(nn.Module):
         k = self.key(input)
         v = self.value(input)
         wei = q @ k.transpose(-1, -2) * (32**-0.5)
-        wei = F.softmax(wei, dim=1)
+        wei = F.softmax(wei, dim=2)
+        self.att_mat = wei
         wei = self.dropout(wei)
         out = wei @ v
         return out
@@ -51,6 +53,7 @@ class MaskedHead(nn.Module):
         self.value = nn.Linear(embd, head_size, bias=False)
         self.dropout = nn.Dropout(dropout)
         self.register_buffer('tril', torch.tril(torch.ones(block_size, block_size, dtype=float)))
+        self.att_mat = None
     def forward(self, input):
         B,T,C = input.shape
         q = self.query(input)
@@ -59,9 +62,11 @@ class MaskedHead(nn.Module):
         wei = q @ k.transpose(-1, -2) *  (k.shape[-1]**-0.5)
         wei = wei.masked_fill(self.tril[:T][:T]==0, float('-inf'))
         wei = F.softmax(wei, dim=-1)
+        self.att_mat = wei
         wei = self.dropout(wei)
         out = wei @ v
         return out
+        
 
 
 class MulitpleHeads(nn.Module):
@@ -80,6 +85,8 @@ class MulitpleHeads(nn.Module):
         out = out.transpose(1,2)
         out = self.proj(out)
         return self.dropout(out)
+    def list_of_attentions(self):
+        return [head.att_mat for head in self.heads]
     
 class FeedForward(nn.Module):
     def __init__(self, embd):
@@ -109,7 +116,7 @@ class Encoder(nn.Module):
         super().__init__()
         self.token_embeddings = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embd)
         self.postional_embeddings = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embd)
-        self.block = Block(embd=embd)
+        self.block = Block(embd=embd, mask_future_tokens=False)
         self.norm = LayerNorm(dim=1)
     def forward(self, x:torch.tensor):
         token_emb = self.token_embeddings(x)
@@ -117,7 +124,7 @@ class Encoder(nn.Module):
         emb_vector = token_emb + pos_emb
         emb_vector = self.block(emb_vector)
         mean_vector = torch.mean(emb_vector, dim=1)
-        return self.norm(mean_vector)
+        return self.norm(mean_vector), self.block.heads.list_of_attentions()
 
 class Decoder(nn.Module):
     def __init__(self,embd, vocab_size, hidden_size=100):
@@ -133,7 +140,7 @@ class Decoder(nn.Module):
             nn.Dropout(0.35)
         )
     
-    def forward(self, x, y):
+    def forward(self, x, y=None):
         # y = F.one_hot(y, num_classes=vocab_size).float()
         # print(y)
         token_emb = self.token_embeddings(x)    # B, T, C
@@ -144,24 +151,26 @@ class Decoder(nn.Module):
         emb_vector = self.norm(emb_vector) # B,T,C
         feedforward_output = self.feedForward_layer(emb_vector) # B,T, vocab_size
         feedforward_output = feedforward_output.view(B*T, vocab_size)
+        if y == None:
+            return feedforward_output, self.block.heads.list_of_attentions()
         y = y.view(B*T)
-        return F.cross_entropy(feedforward_output, y)
+        return F.cross_entropy(feedforward_output, y), self.block.heads.list_of_attentions()
     
 
 class Classifier(nn.Module):
-    def __init__(self, vocab_size, hidden_size=100, embd=64, dropout=dropout_prob):
+    def __init__(self, vocab_size, hidden_size=100, embd=64):
         super().__init__()
         self.encoder = Encoder(vocab_size)
         self.net = nn.Sequential(
             nn.Linear(embd, hidden_size),
             nn.ReLU(),
             nn.Linear(hidden_size, 3),
+            nn.Dropout(0.1),
             nn.Softmax(dim=1),
-            nn.Dropout(dropout),
         )
 
     def forward(self, x):
-        x = self.encoder(x)
+        x, _ = self.encoder(x)
         x = self.net(x)
         predicted_class = torch.argmax(x, dim=1)
         return x, predicted_class
