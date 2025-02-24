@@ -1,7 +1,7 @@
 # Transformer Blocks
 
 ## Overview
-This project implements different components of the Transformer architecture from scratch as part of the CSE156 PA2 assignment. The project consists of two main parts:
+This project implements different components of the Transformer architecture from scratch. The project consists of two main parts:
 
 1. **Transformer Encoder with Classifier**: A Transformer encoder is trained alongside a feedforward classifier to predict which politician delivered a given speech segment.
 2. **GPT-like Transformer Decoder**: A word-level decoder is pretrained on an autoregressive language modeling task, reporting perplexity on different politicians' speeches.
