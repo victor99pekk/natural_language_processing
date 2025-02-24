@@ -1,4 +1,4 @@
-# Transformer Blocks - CSE156 PA2
+# Transformer Blocks
 
 ## Overview
 This project implements different components of the Transformer architecture from scratch as part of the CSE156 PA2 assignment. The project consists of two main parts:
