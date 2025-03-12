@@ -27,12 +27,12 @@ we can also see that the attention map for the two different heads are different
 
 __Head 1:__
 
-![Attention Map Visualization](attention_map1.png)
+![Attention Map Visualization](images/attention_map1.png)
 
 
 __Head 2:__
 
-![Attention Map Visualization](attention_map2.png)
+![Attention Map Visualization](images/attention_map2.png)
 
 ## Decoder for analyzation of perplexity
 A decodr is ideal for autoregressive language modeling since it predicts the next token
@@ -52,12 +52,12 @@ More of you have lost ...
 A note here is that we can see how each token only looks at previous token to predict the next token (main difference from encoder). this makes sense since there wouldn't be much to predict if we were able to look at future tokens when predicting them.
 __Head 1:__
 
-![Attention Map Visualization](attention_map_1.png)
+![Attention Map Visualization](images/attention_map_1.png)
 
 
 __Head 2:__
 
-![Attention Map Visualization](attention_map_2.png)
+![Attention Map Visualization](images/attention_map_2.png)
 
 
 ## Getting Started
