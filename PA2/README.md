@@ -3,10 +3,10 @@
 ## Overview
 This project implements different components of the Transformer architecture from scratch. The project consists of two main parts:
 
-1. **Transformer Encoder with Classifier**: A Transformer encoder is trained jointly from scratch alongside a feedforward classifier to predict which politician delivered a given speech segment.
-2. **GPT-like Transformer Decoder**: A word-level decoder is pretrained on an autoregressive language modeling task, reporting perplexity on different politicians' speeches.
+1. [**Transformer Encoder with Classifier:**](#classifier) A Transformer encoder is trained jointly from scratch alongside a feedforward classifier to predict which politician delivered a given speech segment.
+2. [**GPT-like Transformer Decoder:**](#decoder-for-analyzation-of-perplexity) A word-level decoder is pretrained on an autoregressive language modeling task, reporting perplexity on different politicians' speeches.
 
-__Note:__ no libraries were used to create these, Encoder/Decoder-library was used to import pre-made blocks for this project. The attention-mechanisms were all programmed.
+__Note:__ no libraries were used to create these (more or less, pytorch was used for example), Encoder/Decoder-library was used to import pre-made blocks for this project. The attention-mechanisms were all programmed.
 
 
 ## Classifier
