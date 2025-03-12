@@ -39,6 +39,15 @@ A decodr is ideal for autoregressive language modeling since it predicts the nex
 
 __training:__ The decoder was pretrained using one long text with speeches from all three presidents
 
+```plaintext
+It is costly and politically difficult to continue this conflict.
+More of you have lost ...
+...more..more...
+```
+
+
+
+
 ### Attention map for encoder:
 A note here is that we can see how each token only looks at previous token to predict the next token (main difference from encoder). this makes sense since there wouldn't be much to predict if we were able to look at future tokens when predicting them.
 __Head 1:__
